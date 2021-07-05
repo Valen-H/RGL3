@@ -1,0 +1,8 @@
+{
+  "description": "A test package",
+  "entry": "./main.js",
+  "version": "0.1",
+  "mappings": "./mappings.js",
+  "name": "RGLTest",
+  "$schema": "./rglcfg.schema.json"
+}
