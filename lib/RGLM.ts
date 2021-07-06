@@ -3,7 +3,7 @@
 import * as assert from "assert";
 import * as fs from "fs-extra";
 import * as path from "path";
-import rgl from "./rgl";
+import * as rgl from "./rgl";
 
 export module RGLM {
 	
@@ -15,10 +15,6 @@ export module RGLM {
 	 * RGLM Magic
 	 */
 	export const MAGIC: Readonly<Buf4> = Buffer.from("RGL\0", "ascii") as Buf4;
-	/**
-	 * Blank/Invalid ender Chunk
-	 */
-	export let blank: Readonly<RGLMChunk>;
 	
 	export class RGLMChunk {
 		
@@ -43,6 +39,7 @@ export module RGLM {
 		 * Chunk unique id
 		 */
 		_id: number = RGLMChunk.#idcntr++;
+		onrender: (...data: any[]) => string = (idx: number, c: this, par: RGLM.RGLMap) => this.print;
 		
 		constructor(public chr: string, public fg: number, public bg: number, public st: number, public cust: number) {
 			assert.ok(typeof chr == "string", "Bad Chunk");
@@ -88,17 +85,15 @@ export module RGLM {
 		 * Chunk string representation
 		 */
 		get print(): string {
-			const fg:		(s: string) => string = RGLMChunk.mappings.fg[this.fg]		?? ((s: string): string => s),
+			const fg:	(s: string) => string = RGLMChunk.mappings.fg[this.fg]		?? ((s: string): string => s),
 				bg:		(s: string) => string = RGLMChunk.mappings.bg[this.bg]		?? ((s: string): string => s),
 				st:		(s: string) => string = RGLMChunk.mappings.st[this.st]		?? ((s: string): string => s),
 				cust:	(s: string) => string = RGLMChunk.mappings.cust[this.cust]	?? ((s: string): string => s);
 			
-			return cust(st(fg(bg(this.chr.replaceAll('\x00', '')))));
+			return cust(st(fg(bg(this.chr ?? ' '))));
 		} //g-print
 		
 	} //RGLMChunk
-	
-	blank = RGLMChunk.blank();
 
 	export class RGLMap {
 		static RGLMChunk: typeof RGLMChunk = RGLMChunk;
@@ -108,8 +103,11 @@ export module RGLM {
 		 */
 		chunks: RGLMChunk[] = [ ];
 		_loadedFrom: string = "";
+		meta: {
+			[key: string]: string;
+		} = { };
 		
-		constructor(public dimens: [number, number] = [ 0, 0 ], public parent: rgl.RGL, public scroll: [number, number] = [ 0, 0 ]) {
+		constructor(public dimens: [number, number] = [ 0, 0 ], public parent: rgl.rgl.RGL, public scroll: [number, number] = [ 0, 0 ]) {
 			assert.ok(dimens instanceof Array && dimens.length == 2 && dimens.every(d => d >= 0) &&
 				scroll instanceof Array && scroll.length == 2 && parent, "Bad Map");
 			
@@ -120,26 +118,26 @@ export module RGLM {
 		/**
 		 * Create empty/blank Map
 		 */
-		static blank(par: rgl.RGL) {
+		static blank(par: rgl.rgl.RGL) {
 			return new RGLM.RGLMap([ 0, 0 ], par);
 		} //blank
 		
 		/**
 		 * Craft Map from fs
 		 */
-		static async parse(from: string, par: rgl.RGL): Promise<RGLMap> {
+		static async parse(from: string, par: rgl.rgl.RGL): Promise<RGLMap> {
 			assert.ok(from, "'from' must be provided");
 			
 			from = path.resolve(from);
 			const dat: Buffer = await fs.promises.readFile(from, {
 				flag: "r"
 			}),
-			end: Buffer = Buffer.from("FFFFFFFF", "hex");
+			end: Buf8 = Buffer.from("FFFFFFFFFFFFFFFF", "hex") as Buf8;
 			
 			assert.ok(dat.length >= 8 && !dat.slice(0, 4).compare(Buffer.from("RGL\0", "ascii")), "Broken RGLM");
 			
 			let map = new RGLMap([dat.slice(4, 6).readUInt16LE(), dat.slice(6, 8).readUInt16LE()], par),
-				chk: Buf8,
+				chk: rgl.Nullable<Buf8> = null,
 				i: number = 8,
 				passing: boolean = true;
 			
@@ -151,12 +149,22 @@ export module RGLM {
 					
 					chk = dat.slice(i, i += 8) as Buf8;
 					
-					if (chk.slice(0, 4).compare(end)) {
+					if (chk.compare(end)) {
 						map.chunks.push(RGLMap.RGLMChunk.parse(chk));
 						
 						if (i == dat.length) break;
 					} else passing = false;
 				} while(passing);
+			}
+			
+			if (chk && !chk.compare(end)) {
+				const meta: string[] = dat.slice(i).toString("utf8").split('&');
+				
+				for (const met of meta) {
+					const pair: [string, string] | [string] = met.split('=') as [string, string] | [string];
+					
+					map.meta[pair[0]] = pair[1] ?? '';
+				}
 			}
 			
 			return map;
@@ -183,11 +191,14 @@ export module RGLM {
 				Buffer.allocUnsafe(2) as Buf2,
 				Buffer.allocUnsafe(2) as Buf2,
 			];
+			let meta: Buffer = Buffer.from(Object.entries(this.meta).map(e => e.join('=')).join('&'), "utf8");
 			
 			dimens[0].writeUInt16LE(this.dimens[0]);
 			dimens[1].writeUInt16LE(this.dimens[1]);
 			
-			return Buffer.concat([RGLM.MAGIC, ...dimens, ...this.chunks.map(c => c.pack)], (this.chunks.length + 1) * 8);
+			if (meta.length) meta = Buffer.concat([Buffer.from("FFFFFFFFFFFFFFFF", "hex"), meta]);
+			
+			return Buffer.concat([RGLM.MAGIC, ...dimens, ...this.chunks.map(c => c.pack), meta], (this.chunks.length + 1) * 8 + meta.length);
 		} //g-pack
 		
 		/**
@@ -203,6 +214,8 @@ export module RGLM {
 		calcChkIdx(x: number | RGLMChunk, y: number = 0): number {
 			if (x instanceof RGLMChunk) return this.chunks.findIndex(c => c == x);
 			
+			assert.ok(x >= 0, "Bad idx");
+			
 			return this.dimens[0] * y! + x;
 		} //calcChkIdx
 		/**
@@ -211,9 +224,11 @@ export module RGLM {
 		calcChkCrd(idx: number | RGLMChunk): [number, number] {
 			if (idx instanceof RGLMChunk) idx = this.chunks.findIndex(c => c == idx);
 			
+			assert.ok(idx >= 0, "Bad idx");
+			
 			return [
 				idx % this.dimens[0],
-				idx / this.dimens[0]
+				Math.floor(idx / this.dimens[0])
 			];
 		} //calcChkCrd
 		/**
@@ -230,8 +245,26 @@ export module RGLM {
 		place(c: RGLMChunk[], n: number | RGLMChunk = this.chunks.length, x?: number, repl: number = 1) {
 			const idx: number = typeof x == "undefined" ? (n instanceof RGLMChunk ? this.calcChkIdx(n) : n) : this.calcChkIdx(n, x);
 			
+			assert.ok(idx >= 0, "Bad idx");
+			
 			return this.chunks.splice(idx, repl, ...c);
 		} //place
+		/**
+		 * Swap Chunks locations
+		 */
+		swap(c1: RGLMChunk, c2: RGLMChunk): this {
+			const ci1: number = this.calcChkIdx(c1);
+			assert.ok(ci1 >= 0, "Bad idx");
+			const cc1: RGLMChunk = this.chunks.splice(ci1, 1)[0];
+			
+			const ci2: number = this.calcChkIdx(c2);
+			assert.ok(ci2 >= 0, "Bad idx");
+			const cc2: RGLMChunk = this.chunks.splice(ci2, 1, cc1)[0];
+			
+			this.chunks.splice(ci1, 0, cc2);
+			
+			return this;
+		} //swap
 		
 		/**
 		 * Check if Chunk is inside bounds
@@ -253,7 +286,7 @@ export module RGLM {
 		/**
 		 * Imprint Map on RGL
 		 */
-		async stamp(dx: number = this.dimens[0], dy: number = this.dimens[1], x: number = 0, y: number = 0, sx: number = this.scroll[0], sy: number = this.scroll[1], par: rgl.RGL = this.parent): Promise<this> {
+		async stamp(dx: number = this.dimens[0], dy: number = this.dimens[1], x: number = 0, y: number = 0, sx: number = this.scroll[0], sy: number = this.scroll[1], par: rgl.rgl.RGL = this.parent): Promise<this> {
 			assert.ok(par, "Bad parent");
 			
 			const sav: [number, number] = [...par.cursor];
@@ -261,11 +294,9 @@ export module RGLM {
 			for (let idx: number = 0; idx < this.chunks.length; idx++) {
 				const c: RGLM.RGLMChunk = this.chunks[idx];
 				
-				if (!c.chr) continue;
-				
 				if (this.isIn(idx, undefined, x, y, sx, sy, dx, dy)) {
-					await par.move(...this.calcChkCrd(idx));
-					par.write(c.print);
+					await par.move(...(this.calcChkCrd(idx).map((c: number, idx: number): number => c + [sx, sy][idx])) as [number, number]);
+					par.write(c.onrender(idx, c, this));
 				}
 			}
 			
@@ -273,6 +304,22 @@ export module RGLM {
 			
 			return this;
 		} //stamp
+		
+		*[Symbol.iterator](): Generator<RGLMChunk, void, RGLMChunk> {
+			for (const c of this.chunks)
+				yield c;
+		}
+		
+		get [Symbol.isConcatSpreadable](): boolean {
+			return true;
+		}
+		
+		get [Symbol.toStringTag]() {
+			return this.toString();
+		}
+		toString() {
+			return this.print;
+		} //toString
 		
 	} //RGLMap
 	

@@ -11,7 +11,7 @@ import * as event from "events";
 import * as tty from "tty";
 import * as rglm from "./RGLM";
 export declare module rgl {
-    const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u";
+    const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u", mouseOn = "\u001B[?1000h\u001B[?1005h\u001B[?1003h\u001B[?1015h\u001B[?1006h", mouseOff = "\u001B[?1000l\u001B[?1005l\u001B[?1003l\u001B[?1015l\u001B[?1006l";
     /**
      * Package Config
      */
@@ -45,17 +45,29 @@ export declare module rgl {
         static readonly special_keys: {
             ctrlC: Readonly<NonNullable<Buffer>>;
             ctrlV: Readonly<NonNullable<Buffer>>;
+            ctrlZ: Readonly<NonNullable<Buffer>>;
+            ctrlY: Readonly<NonNullable<Buffer>>;
             up: Readonly<NonNullable<Buffer>>;
             down: Readonly<NonNullable<Buffer>>;
             right: Readonly<NonNullable<Buffer>>;
             left: Readonly<NonNullable<Buffer>>;
-            enter: Readonly<NonNullable<Buffer>>;
-            back: Readonly<NonNullable<Buffer>>;
-            del: Readonly<NonNullable<Buffer>>;
             shiftUp: Readonly<NonNullable<Buffer>>;
             shiftDown: Readonly<NonNullable<Buffer>>;
             shiftRight: Readonly<NonNullable<Buffer>>;
             shiftLeft: Readonly<NonNullable<Buffer>>;
+            ctrlUp: Readonly<NonNullable<Buffer>>;
+            ctrlDown: Readonly<NonNullable<Buffer>>;
+            ctrlRight: Readonly<NonNullable<Buffer>>;
+            ctrlLeft: Readonly<NonNullable<Buffer>>;
+            ctrlShiftUp: Readonly<NonNullable<Buffer>>;
+            ctrlShiftDown: Readonly<NonNullable<Buffer>>;
+            ctrlShiftRight: Readonly<NonNullable<Buffer>>;
+            ctrlShiftLeft: Readonly<NonNullable<Buffer>>;
+            enter: Readonly<NonNullable<Buffer>>;
+            altEnter: Readonly<NonNullable<Buffer>>;
+            back: Readonly<NonNullable<Buffer>>;
+            del: Readonly<NonNullable<Buffer>>;
+            tab: Readonly<NonNullable<Buffer>>;
         };
         constructor(cfg: RGLCfg);
         get dimens(): [number, number] | [0, 0];
@@ -86,7 +98,7 @@ export declare module rgl {
         /**
          * Write-and-count to SOUT
          */
-        write(d: string | Uint8Array | Buffer, ...data: (string | Uint8Array)[]): boolean;
+        write(d?: string | Uint8Array | Buffer, ...data: (string | Uint8Array)[]): boolean;
         /**
          * Write-and-count-newline to SOUT
          */

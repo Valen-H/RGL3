@@ -1,0 +1,9 @@
+*.sln
+*.njsproj
+package-lock.json
+readme.htm
+*.bak
+*.htm
+*.tsbuildinfo
+*.rglm
+*.tgz

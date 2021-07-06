@@ -27,7 +27,7 @@ Each RGL package contains a config.
 
 ### RGLM format
 
-```js
+```ts
 magic = 4B
 width = 2B
 height = 2B
@@ -40,59 +40,21 @@ meta = ?
 `end = 255 x4` (optional)
 `meta = key=value&...` (urlstring - optional)
 
-## RGL Class (extends Event)
-
-```js
-load(json/path/file="./rglcfg.json") -> RGL
-execEntry(path/file=this.entry) -> eval_out
-captureKeys(on/off/toggle) -> keys_state
-store(path/file="./rglcfg.json") -> json
-```
-
-## RGLMap Class
-
-```js
-.viewbox[number, number, number, number ] = [-1, -1, width, height] // x,y,dx,dy - -1 means auto-for-centering - automatic width/height based on tty
-.chunks: Chunk[] = [ ]
-.fromfile: string //source of map
-._id
-
-load(buffer) -> RGLMap
-loadFile(path/file) -> RGLMap
-store() -> Buffer
-storeFile(path/file) -> bool
-
-calcChkIdx(x, y) -> number
-calcChkCrd(n) -> [ number, number ]
-getChunk(x[, y]) -> Chunk //get indexed or coordinated
-moveChunk(from, to, swap=false) -> Chunk //return to, inputs are idx or crd
-moveLine(from, to, swap=false)
-
-print(width=auto) -> string
-stamp(tty) -> this
-```
-
-## RGLChunk Class
-
-```js
-.fg
-.bg
-.st
-.owner_map
-._id
-
-getBlank() -> RGLChunk // make blank Chunk
-parse(buffer) -> RGLChunk
-zip() -> buffer
-putIfVisible(x, y, tty)
-print() -> string
-```
-
 ## RGL binary
 
-```js
-rgl - play local package (search for rglcfg.json)
-rgl <path> - play package at path
-rgl rglm_file<path> - Display map interactively
-rgl make name<string> - make new package
+```ts
+rgl[ path<string=.>] - play package at path - if directory, search rglcfg.json/package.json, else play
+rgl map[ path<string>] - Display/Edit map interactively
+rgl make[ name<string>] - make new package - Give directory name if not provided
+```
+
+### RGL `map`
+
+```ts
+Move Line Up/Down/Left/Right
+Shift Line Horizontally/Vertically
+Delete Line Horizontally/Vertically
+Add Line Blank Horizontally/Vertically
+Move Chunk based on cursor
+Delete Chunk on cursor
 ```

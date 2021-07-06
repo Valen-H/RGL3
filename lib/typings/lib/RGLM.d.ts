@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import rgl from "./rgl";
+import * as rgl from "./rgl";
 export declare module RGLM {
     type Buf8 = Buffer & {
         length: 8;
@@ -14,10 +14,6 @@ export declare module RGLM {
      * RGLM Magic
      */
     const MAGIC: Readonly<Buf4>;
-    /**
-     * Blank/Invalid ender Chunk
-     */
-    let blank: Readonly<RGLMChunk>;
     class RGLMChunk {
         #private;
         chr: string;
@@ -38,6 +34,7 @@ export declare module RGLM {
          * Chunk unique id
          */
         _id: number;
+        onrender: (...data: any[]) => string;
         constructor(chr: string, fg: number, bg: number, st: number, cust: number);
         /**
          * Repack into Buf8
@@ -58,7 +55,7 @@ export declare module RGLM {
     }
     class RGLMap {
         dimens: [number, number];
-        parent: rgl.RGL;
+        parent: rgl.rgl.RGL;
         scroll: [number, number];
         static RGLMChunk: typeof RGLMChunk;
         /**
@@ -66,15 +63,18 @@ export declare module RGLM {
          */
         chunks: RGLMChunk[];
         _loadedFrom: string;
-        constructor(dimens: [number, number], parent: rgl.RGL, scroll?: [number, number]);
+        meta: {
+            [key: string]: string;
+        };
+        constructor(dimens: [number, number], parent: rgl.rgl.RGL, scroll?: [number, number]);
         /**
          * Create empty/blank Map
          */
-        static blank(par: rgl.RGL): RGLMap;
+        static blank(par: rgl.rgl.RGL): RGLMap;
         /**
          * Craft Map from fs
          */
-        static parse(from: string, par: rgl.RGL): Promise<RGLMap>;
+        static parse(from: string, par: rgl.rgl.RGL): Promise<RGLMap>;
         /**
          * (Re)store Map to fs
          */
@@ -104,6 +104,10 @@ export declare module RGLM {
          */
         place(c: RGLMChunk[], n?: number | RGLMChunk, x?: number, repl?: number): RGLMChunk[];
         /**
+         * Swap Chunks locations
+         */
+        swap(c1: RGLMChunk, c2: RGLMChunk): this;
+        /**
          * Check if Chunk is inside bounds
          *
          * t* - chunk target
@@ -115,7 +119,11 @@ export declare module RGLM {
         /**
          * Imprint Map on RGL
          */
-        stamp(dx?: number, dy?: number, x?: number, y?: number, sx?: number, sy?: number, par?: rgl.RGL): Promise<this>;
+        stamp(dx?: number, dy?: number, x?: number, y?: number, sx?: number, sy?: number, par?: rgl.rgl.RGL): Promise<this>;
+        [Symbol.iterator](): Generator<RGLMChunk, void, RGLMChunk>;
+        get [Symbol.isConcatSpreadable](): boolean;
+        get [Symbol.toStringTag](): string;
+        toString(): string;
     }
 }
 export default RGLM;

@@ -1,12 +1,12 @@
 {
   "name": "rgl",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "lockfileVersion": 2,
   "requires": true,
   "packages": {
     "": {
       "name": "rgl",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bundleDependencies": [
         "chalk",
         "fs-extra",

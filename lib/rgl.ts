@@ -30,7 +30,9 @@ export module rgl {
 	export const scrollUp = (by: number | string = 1) => `\x1b[${by}S`,
 		scrollDown = (by: number | string = 1) => `\x1b[${by}T`,
 		save = `\x1b7\x1b[s`,
-		restore = `\x1b8\x1b[u`;
+		restore = `\x1b8\x1b[u`,
+		mouseOn = `\x1b[?1000h\x1b[?1005h\x1b[?1003h\x1b[?1015h\x1b[?1006h`,
+		mouseOff = `\x1b[?1000l\x1b[?1005l\x1b[?1003l\x1b[?1015l\x1b[?1006l`;
 	
 	/**
 	 * Package Config
@@ -86,36 +88,57 @@ export module rgl {
 		 * Special keys for convenience
 		 */
 		static readonly special_keys: {
-			ctrlC:		Readonly<NonNullable<Buffer>>;
-			ctrlV:		Readonly<NonNullable<Buffer>>;
-			up:			Readonly<NonNullable<Buffer>>;
-			down:		Readonly<NonNullable<Buffer>>;
-			right:		Readonly<NonNullable<Buffer>>;
-			left:		Readonly<NonNullable<Buffer>>;
-			enter:		Readonly<NonNullable<Buffer>>;
-			back:		Readonly<NonNullable<Buffer>>;
-			del:		Readonly<NonNullable<Buffer>>;
-			shiftUp:	Readonly<NonNullable<Buffer>>;
-			shiftDown:	Readonly<NonNullable<Buffer>>;
-			shiftRight:	Readonly<NonNullable<Buffer>>;
-			shiftLeft:	Readonly<NonNullable<Buffer>>;
+			ctrlC:			Readonly<NonNullable<Buffer>>;
+			ctrlV:			Readonly<NonNullable<Buffer>>;
+			ctrlZ:			Readonly<NonNullable<Buffer>>;
+			ctrlY:			Readonly<NonNullable<Buffer>>;
+			up:				Readonly<NonNullable<Buffer>>;
+			down:			Readonly<NonNullable<Buffer>>;
+			right:			Readonly<NonNullable<Buffer>>;
+			left:			Readonly<NonNullable<Buffer>>;
+			shiftUp:		Readonly<NonNullable<Buffer>>;
+			shiftDown:		Readonly<NonNullable<Buffer>>;
+			shiftRight:		Readonly<NonNullable<Buffer>>;
+			shiftLeft:		Readonly<NonNullable<Buffer>>;
+			ctrlUp:			Readonly<NonNullable<Buffer>>;
+			ctrlDown:		Readonly<NonNullable<Buffer>>;
+			ctrlRight:		Readonly<NonNullable<Buffer>>;
+			ctrlLeft:		Readonly<NonNullable<Buffer>>;
+			ctrlShiftUp:	Readonly<NonNullable<Buffer>>;
+			ctrlShiftDown:	Readonly<NonNullable<Buffer>>;
+			ctrlShiftRight:	Readonly<NonNullable<Buffer>>;
+			ctrlShiftLeft:	Readonly<NonNullable<Buffer>>;
+			enter:			Readonly<NonNullable<Buffer>>;
+			altEnter:		Readonly<NonNullable<Buffer>>;
+			back:			Readonly<NonNullable<Buffer>>;
+			del:			Readonly<NonNullable<Buffer>>;
+			tab:			Readonly<NonNullable<Buffer>>;
 		} = {
-			ctrlC:		Buffer.from("03",			"hex"),
-			ctrlV:		Buffer.from("16",			"hex"),
-			up:			Buffer.from("1b5b41",		"hex"),
-			down:		Buffer.from("1b5b42",		"hex"),
-			right:		Buffer.from("1b5b43",		"hex"),
-			left:		Buffer.from("1b5b44",		"hex"),
-			enter:		Buffer.from("0d",			"hex"), //0a
-			back:		Buffer.from("08",			"hex"), //+ctrlH
-			del:		Buffer.from("1b5b337e",		"hex"),
-			shiftUp:	Buffer.from("1b5b313b3241",	"hex"),
-			shiftDown:	Buffer.from("1b5b313b3242",	"hex"),
-			shiftRight:	Buffer.from("1b5b313b3243",	"hex"),
-			shiftLeft:	Buffer.from("1b5b313b3244",	"hex"),
-			/**
-			 * @todo add ctrl/shift arrows(?)
-			*/
+			ctrlC:			Buffer.from("03",			"hex"),
+			ctrlV:			Buffer.from("16",			"hex"),
+			ctrlZ:			Buffer.from("1a",			"hex"),
+			ctrlY:			Buffer.from("19",			"hex"),
+			up:				Buffer.from("1b5b41",		"hex"),
+			down:			Buffer.from("1b5b42",		"hex"),
+			right:			Buffer.from("1b5b43",		"hex"),
+			left:			Buffer.from("1b5b44",		"hex"),
+			shiftUp:		Buffer.from("1b5b313b3241",	"hex"),
+			shiftDown:		Buffer.from("1b5b313b3242",	"hex"),
+			shiftRight:		Buffer.from("1b5b313b3243",	"hex"),
+			shiftLeft:		Buffer.from("1b5b313b3244",	"hex"),
+			ctrlUp:			Buffer.from("1b5b313b3541",	"hex"),
+			ctrlDown:		Buffer.from("1b5b313b3542",	"hex"),
+			ctrlRight:		Buffer.from("1b5b313b3543",	"hex"),
+			ctrlLeft:		Buffer.from("1b5b313b3544",	"hex"),
+			ctrlShiftUp:	Buffer.from("1b5b313b3641",	"hex"),
+			ctrlShiftDown:	Buffer.from("1b5b313b3642",	"hex"),
+			ctrlShiftRight:	Buffer.from("1b5b313b3643",	"hex"),
+			ctrlShiftLeft:	Buffer.from("1b5b313b3644",	"hex"),
+			enter:			Buffer.from("0d",			"hex"), //0d = \r, 0a = \n
+			altEnter:		Buffer.from("1b0d",			"hex"), //+ctrlAltEnter +shiftAltEnter
+			back:			Buffer.from("08",			"hex"), //+ctrlH
+			del:			Buffer.from("1b5b337e",		"hex"),
+			tab:			Buffer.from("09",			"hex"),
 		};
 		
 		constructor(protected cfg: RGLCfg) {
@@ -125,29 +148,29 @@ export module rgl {
 			
 			assert.ok(this.cfg.name, "RGL 'name' must be provided in the config");
 			
-			this.cfg.main		= "./" + path.win32.normalize(this.cfg.main ?? "./main.js");
-			this.cfg.mappings	= "./" + path.win32.normalize(this.cfg.mappings ?? "./mappings.js");
+			this.cfg.main		= "./" + path.win32.normalize(this.cfg.main || "./main.js");
+			this.cfg.mappings	= "./" + path.win32.normalize(this.cfg.mappings || "./mappings.js");
 			
 			//process.stdout.write(`\x1b]0;${this.cfg.name}\a`);
-			process.title = this.cfg.name ?? process.title ?? "RGL";
+			process.title = this.cfg.name || process.title || "RGL";
 			
 			this.parseMappings();
 		} //ctor
 		
 		get dimens(): [number, number] | [0, 0] {
-			return this.sout?.getWindowSize() ?? [0, 0];
+			return this.sout?.getWindowSize() || [0, 0];
 		} //g-dimens
 		get cDpt(): number {
 			return this.colorDepth();
 		} //g-cDpt
 		get serr(): tty.WriteStream {
-			return this._bound.serr ?? this._bound.sout ?? process.stderr;
+			return this._bound.serr || this._bound.sout || process.stderr;
 		} //g-serr
 		get sout(): tty.WriteStream {
-			return this._bound.sout ?? process.stdout;
+			return this._bound.sout || process.stdout;
 		} //g-sout
 		get sin(): tty.ReadStream {
-			return this._bound.sin ?? process.stdin;
+			return this._bound.sin || process.stdin;
 		} //g-sin
 		
 		/**
@@ -176,8 +199,9 @@ export module rgl {
 			if ((which.isRaw && !bind) || (!which.isRaw && bind)) which.setRawMode(bind);
 			
 			if (this._bound.sinbind && this._bound.sin) {
-				this._bound.sin!.removeListener("data", this._bound.sinbind!);
+				this.sin.removeListener("data", this._bound.sinbind!);
 				this._bound.sinbind = null;
+				this.serr.write(rgl.mouseOff);
 			}
 			
 			if (which.isRaw) {
@@ -191,6 +215,8 @@ export module rgl {
 			this._bound.sin = which;
 			this._bound.sout = out;
 			this._bound.serr = err;
+			
+			this.serr.write(rgl.mouseOn);
 			
 			this.emit("debug", `TTY set to ${bind}`);
 			
@@ -217,7 +243,7 @@ export module rgl {
 		/**
 		 * Store package Config to File
 		 */
-		async store(to: string = this.#_loadedFrom ?? "./package.json", repl?: ((this: any, key: string, value: number) => any), pad: number = 2): Promise<any> {
+		async store(to: string = this.#_loadedFrom || "./package.json", repl?: ((this: any, key: string, value: number) => any), pad: number = 2): Promise<any> {
 			assert.ok(to && typeof to == "string", "'config' must be a valid path");
 			
 			return await fs.writeJSON(to, this.cfg, {
@@ -233,7 +259,7 @@ export module rgl {
 		/**
 		 * Launch package entry
 		 */
-		exec(from: Nullable<string> = this.cfg.main ?? "./main.js"): any{
+		exec(from: Nullable<string> = this.cfg.main || "./main.js"): any{
 			assert.ok(from, "'main' must be a valid path");
 			
 			from = path.win32.join(process.cwd(), from);
@@ -250,13 +276,13 @@ export module rgl {
 		/**
 		 * Write-and-count to SOUT
 		 */
-		write(d: string | Uint8Array | Buffer, ...data: (string | Uint8Array)[]): boolean {
+		write(d: string | Uint8Array | Buffer = "", ...data: (string | Uint8Array)[]): boolean {
 			if (d instanceof Buffer) d = d.toString("ascii");
 			else if (d instanceof Uint8Array) d = d.join('');
 			
-			d = d.replaceAll('\t', ' '.repeat(4)).replaceAll(/((?<!\r)\n(?!\r)|(?<!\n)\r(?!\n)|\r\n|\n\r)/gmis, '\n');
+			d = d.toString().replaceAll('\t', ' '.repeat(4)).replaceAll(/((?<!\r)\n(?!\r)|(?<!\n)\r(?!\n)|\r\n|\n\r)/gmis, '\n');
 			
-			const chs: string[] = d.toString().split('\n'),
+			const chs: string[] = d.split('\n'),
 				len: number = chs.length - 1;
 			
 			if (len >= 1) this.cursor[0] = chs[len].length;

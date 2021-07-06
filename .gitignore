@@ -1,6 +1,4 @@
 
-
-
 *.sln
 *.njsproj
 package-lock.json
