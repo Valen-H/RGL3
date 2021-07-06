@@ -1,14 +1,13 @@
 "use strict";
 
-const mod = require("../");
+const mod = require("../"),
+	util = require("util");
 
-//console.log("..");
-
-mod.rgl.RGL.load().then(rgl => {
+mod.rgl.RGL.load("./test/rglcfg.json").then(rgl => {
 	rgl.capture();
 	rgl.writeE("Loaded");
 	
-	let map = mod.rglm.RGLM.RGLMap.parse("./test/map.rglm");
+	let map = mod.rglm.RGLM.RGLMap.parse("./test/map.rglm", rgl);
 	
 	rgl.clear().then(async () => {
 		rgl.writeE(`Color Depth: ${rgl.cDpt}`);
@@ -18,12 +17,9 @@ mod.rgl.RGL.load().then(rgl => {
 		map = await map;
 		
 		await map.store();
-		rgl.writeE("Map stored.");
+		rgl.writeE(`Map stored. (${map.print})`);
+		await map.stamp();
 	});
-	
-	//console.log(mod.rgl.save);
-	//console.debug(rgl);
-	//console.log(mod.rgl.restore);
 	
 	rgl.on("rawctrlkey", (k, c, a, b) => {
 		if (a) rgl.writeE("ALT");
@@ -34,9 +30,7 @@ mod.rgl.RGL.load().then(rgl => {
 		else if (!k.compare(mod.rgl.RGL.special_keys.left))		rgl.writeE("LEFT");
 		else if (!k.compare(mod.rgl.RGL.special_keys.right))	rgl.writeE("RIGHT");
 		else if (!k.compare(mod.rgl.RGL.special_keys.enter))	rgl.writeE("ENTER");
-		else	rgl.writeE(k, k.toString("utf8"), c.toString("utf8"), b.toString());
+		else	rgl.writeE(util.inspect(k), '\t', b.toString("utf8"));
 	});
 	rgl.on("clear", (...o) => rgl.writeE("CLEAR", ...o));
-	
-	//setInterval(() => rgl.clear([1, 2, 3, 4, 5, 6]), 2000);
 });

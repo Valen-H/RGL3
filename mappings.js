@@ -2,57 +2,60 @@
 
 "use strict";
 
-const c = require("chalk");
+const c = require("chalk"),
+	assert = require("assert");
 
 console.info("Mappings loaded.");
 
 module.exports = {
 	fg: [
-		s => black(s),
-		s => red(s),
-		s => green(s),
-		s => yellow(s),
-		s => blue(s),
-		s => magenta(s),
-		s => cyan(s),
-		s => white(s),
-		s => blackBright(s),
-		s => redBright(s),
-		s => greenBright(s),
-		s => yellowBright(s),
-		s => blueBright(s),
-		s => magentaBright(s),
-		s => cyanBright(s),
-		s => whiteBright(s),
+		s => c.black(s),			//0
+		s => c.red(s),				//1
+		s => c.green(s),			//2
+		s => c.yellow(s),			//3
+		s => c.blue(s),				//4
+		s => c.magenta(s),			//5
+		s => c.cyan(s),				//6
+		s => c.white(s),			//7
+		s => c.blackBright(s),		//8
+		s => c.redBright(s),		//9
+		s => c.greenBright(s),		//10
+		s => c.yellowBright(s),		//11
+		s => c.blueBright(s),		//12
+		s => c.magentaBright(s),	//13
+		s => c.cyanBright(s),		//14
+		s => c.whiteBright(s),		//15
 	],
 	bg: [
-		s => bgBlack(s),
-		s => bgRed(s),
-		s => bgGreen(s),
-		s => bgYellow(s),
-		s => bgBlue(s),
-		s => bgMagenta(s),
-		s => bgCyan(s),
-		s => bgWhite(s),
-		s => bgBlackBright(s),
-		s => bgRedBright(s),
-		s => bgGreenBright(s),
-		s => bgYellowBright(s),
-		s => bgBlueBright(s),
-		s => bgMagentaBright(s),
-		s => bgCyanBright(s),
-		s => bgWhiteBright(s),
+		s => c.bgBlack(s),			//0
+		s => c.bgRed(s),			//1
+		s => c.bgGreen(s),			//2
+		s => c.bgYellow(s),			//3
+		s => c.bgBlue(s),			//4
+		s => c.bgMagenta(s),		//5
+		s => c.bgCyan(s),			//6
+		s => c.bgWhite(s),			//7
+		s => c.bgBlackBright(s),	//8
+		s => c.bgRedBright(s),		//9
+		s => c.bgGreenBright(s),	//10
+		s => c.bgYellowBright(s),	//11
+		s => c.bgBlueBright(s),		//12
+		s => c.bgMagentaBright(s),	//13
+		s => c.bgCyanBright(s),		//14
+		s => c.bgWhiteBright(s),	//15
 	],
 	st: [
-		s => c.reset(s),
-		s => bold(s),
-		s => dim(s),
-		s => italic(s),
-		s => underline(s),
-		s => inverse(s),
-		s => hidden(s),
-		s => strikethrough(s),
-		s => visible(s),
+		s => c.reset(s),			//0
+		s => c.bold(s),				//1
+		s => c.dim(s),				//2
+		s => c.italic(s),			//3
+		s => c.underline(s),		//4
+		s => c.inverse(s),			//5
+		s => c.hidden(s),			//6
+		s => c.strikethrough(s),	//7
+		s => c.visible(s),			//8
 	],
 	cust: []
 };
+
+assert.ok(Object.values(module.exports).every(m => m.length < 0xff), "Cannot have more than 254 category mappings");

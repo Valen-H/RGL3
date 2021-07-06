@@ -1,11 +1,23 @@
 /// <reference types="node" />
+import rgl from "./rgl";
 export declare module RGLM {
-    type ChunkBuf = Buffer & {
+    type Buf8 = Buffer & {
         length: 8;
     };
-    const MAGIC: Buffer & {
+    type Buf4 = Buffer & {
         length: 4;
     };
+    type Buf2 = Buffer & {
+        length: 2;
+    };
+    /**
+     * RGLM Magic
+     */
+    const MAGIC: Readonly<Buf4>;
+    /**
+     * Blank/Invalid ender Chunk
+     */
+    let blank: Readonly<RGLMChunk>;
     class RGLMChunk {
         #private;
         chr: string;
@@ -13,28 +25,97 @@ export declare module RGLM {
         bg: number;
         st: number;
         cust: number;
+        /**
+         * Formatting mappings, set by parent module
+         */
         static mappings: {
             fg: ((s: string) => string)[];
             bg: ((s: string) => string)[];
             st: ((s: string) => string)[];
             cust: ((s: string) => string)[];
         };
+        /**
+         * Chunk unique id
+         */
         _id: number;
         constructor(chr: string, fg: number, bg: number, st: number, cust: number);
-        get pack(): ChunkBuf;
+        /**
+         * Repack into Buf8
+         */
+        get pack(): Buf8;
+        /**
+         * Craft invalid/blank ender Chunk
+         */
         static blank(): RGLMChunk;
-        static parse(buf: Readonly<ChunkBuf>): RGLMChunk;
-        print(): string;
+        /**
+         * Buf8 -> Chunk
+         */
+        static parse(buf: Readonly<Buf8>): RGLMChunk;
+        /**
+         * Chunk string representation
+         */
+        get print(): string;
     }
     class RGLMap {
-        #private;
-        protected dimens: [number, number];
+        dimens: [number, number];
+        parent: rgl.RGL;
+        scroll: [number, number];
         static RGLMChunk: typeof RGLMChunk;
-        protected chunks: RGLMChunk[];
-        constructor(dimens?: [number, number]);
-        static parse(from: string): Promise<RGLMap>;
+        /**
+         * Map Chunks
+         */
+        chunks: RGLMChunk[];
+        _loadedFrom: string;
+        constructor(dimens: [number, number], parent: rgl.RGL, scroll?: [number, number]);
+        /**
+         * Create empty/blank Map
+         */
+        static blank(par: rgl.RGL): RGLMap;
+        /**
+         * Craft Map from fs
+         */
+        static parse(from: string, par: rgl.RGL): Promise<RGLMap>;
+        /**
+         * (Re)store Map to fs
+         */
         store(to?: string): Promise<void>;
+        /**
+         * Map -> Buff
+         */
         get pack(): Buffer;
+        /**
+         * String representation of Map's Chunks
+         */
+        get print(): string;
+        /**
+         * Calculate Viewport coordinates from chunklist index
+         */
+        calcChkIdx(x: number | RGLMChunk, y?: number): number;
+        /**
+         * Calculate chunklist index from Viewport coordinates
+         */
+        calcChkCrd(idx: number | RGLMChunk): [number, number];
+        /**
+         * Get a Chunk
+         */
+        get(n: number | RGLMChunk, x?: number): RGLMChunk;
+        /**
+         * Place a Chunk
+         */
+        place(c: RGLMChunk[], n?: number | RGLMChunk, x?: number, repl?: number): RGLMChunk[];
+        /**
+         * Check if Chunk is inside bounds
+         *
+         * t* - chunk target
+         * d* - viewport size
+         * s* - viewport scroll
+         * * - viewport
+         */
+        isIn(tx: number, ty?: number, x?: number, y?: number, sx?: number, sy?: number, dx?: number, dy?: number): boolean;
+        /**
+         * Imprint Map on RGL
+         */
+        stamp(dx?: number, dy?: number, x?: number, y?: number, sx?: number, sy?: number, par?: rgl.RGL): Promise<this>;
     }
 }
 export default RGLM;

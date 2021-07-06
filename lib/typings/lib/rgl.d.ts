@@ -12,20 +12,36 @@ import * as tty from "tty";
 import * as rglm from "./RGLM";
 export declare module rgl {
     const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u";
+    /**
+     * Package Config
+     */
     interface RGLCfg {
         name: string;
         description?: string;
-        entry?: string;
+        main: string;
         version?: string;
         mappings?: string;
+        keywords?: string[];
         "$schema"?: string;
     }
+    /**
+     * Main packaging Class
+     */
     class RGL extends event.EventEmitter {
         #private;
         protected cfg: RGLCfg;
+        /**
+         * TTY streams bound to app
+         */
         private _bound;
+        /**
+         * SOUT cursor state
+         */
         cursor: [number, number];
         static readonly defaults: Partial<RGLCfg>;
+        /**
+         * Special keys for convenience
+         */
         static readonly special_keys: {
             ctrlC: Readonly<NonNullable<Buffer>>;
             ctrlV: Readonly<NonNullable<Buffer>>;
@@ -34,6 +50,12 @@ export declare module rgl {
             right: Readonly<NonNullable<Buffer>>;
             left: Readonly<NonNullable<Buffer>>;
             enter: Readonly<NonNullable<Buffer>>;
+            back: Readonly<NonNullable<Buffer>>;
+            del: Readonly<NonNullable<Buffer>>;
+            shiftUp: Readonly<NonNullable<Buffer>>;
+            shiftDown: Readonly<NonNullable<Buffer>>;
+            shiftRight: Readonly<NonNullable<Buffer>>;
+            shiftLeft: Readonly<NonNullable<Buffer>>;
         };
         constructor(cfg: RGLCfg);
         get dimens(): [number, number] | [0, 0];
@@ -41,16 +63,64 @@ export declare module rgl {
         get serr(): tty.WriteStream;
         get sout(): tty.WriteStream;
         get sin(): tty.ReadStream;
-        parseMappings(from?: Nullable<string>): any;
+        /**
+         * Parse Mappings from File
+         */
+        parseMappings(from?: Nullable<string>): Object;
+        /**
+         * Capture keys from SIN
+         */
         capture(which?: tty.ReadStream, bind?: boolean, out?: tty.WriteStream, err?: tty.WriteStream): boolean;
+        /**
+         * Load package Config from File
+         */
         static load(from?: string | RGLCfg): Promise<RGL>;
-        store(to?: string, repl?: ((this: any, key: string, value: number) => any), pad?: number): Promise<void>;
-        exec(from?: Nullable<string>): void;
-        write(d: string | Uint8Array, ...data: (string | Uint8Array)[]): boolean;
-        writeE(...data: (string | Uint8Array)[]): boolean;
+        /**
+         * Store package Config to File
+         */
+        store(to?: string, repl?: ((this: any, key: string, value: number) => any), pad?: number): Promise<any>;
+        /**
+         * Launch package entry
+         */
+        exec(from?: Nullable<string>): any;
+        /**
+         * Write-and-count to SOUT
+         */
+        write(d: string | Uint8Array | Buffer, ...data: (string | Uint8Array)[]): boolean;
+        /**
+         * Write-and-count-newline to SOUT
+         */
+        writeE(...data: (string | Uint8Array | Buffer)[]): boolean;
+        /**
+         * Get TTY color depth
+         */
         colorDepth(env?: NodeJS.ProcessEnv): number;
-        move(x: number, y: number | undefined, rel?: boolean): Promise<unknown>;
+        /**
+         * Move-and-count SOUT cursor
+         */
+        move(x: number, y?: number, rel?: boolean): Promise<boolean>;
+        /**
+         * Clear-and-restore SOUT
+         */
         clear(lines?: number[] | number, dir?: tty.Direction, rel?: boolean): Promise<boolean>;
+        once(eventname: "log", listener: (...args: any[]) => void): this;
+        once(eventname: "debug", listener: (...args: any[]) => void): this;
+        once(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
+        once(eventname: "write", listener: (d: string | Uint8Array) => void): this;
+        once(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
+        once(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
+        once(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
+        once(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+        once(eventname: string | symbol, listener: (...args: any[]) => void): this;
+        on(eventname: "log", listener: (...args: any[]) => void): this;
+        on(eventname: "debug", listener: (...args: any[]) => void): this;
+        on(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
+        on(eventname: "write", listener: (d: string | Uint8Array) => void): this;
+        on(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
+        on(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
+        on(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
+        on(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+        on(eventname: string | symbol, listener: (...args: any[]) => void): this;
         emit(eventname: "log", ...args: any[]): any;
         emit(eventname: "debug", ...args: any[]): any;
         emit(eventname: "clear", lines: number, dir: tty.Direction, rel: boolean, out: boolean): any;

@@ -67,8 +67,8 @@
   "publishConfig": {},
   "scripts": {
     "start": "node index.js",
-    "test": "node test/index.js",
-    "debug": "node --expose-gc --inspect test/index.js",
+    "test": "set NODE_DEBUG=RGL&node test/index.js",
+    "debug": "set NODE_DEBUG=RGL&node --expose-gc --inspect test/index.js",
     "bat": "./start.bat",
     "build": "tsc -w",
     "doc": "jsdoc ./dist -r -c jsdoc.json -d ./doc -R README.md -P package.json",

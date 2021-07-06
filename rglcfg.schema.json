@@ -15,14 +15,18 @@
 			"type": "string",
 			"description": "Package description"
 		},
-		"entry": {
+		"main": {
 			"type": "string",
 			"description": "Entry of package"
 		},
 		"mappings": {
 			"type": "string",
 			"description": "Path to mappings.js"
+		},
+		"keywords": {
+			"type": "array",
+			"description": "Keywords of package"
 		}
 	},
-	"required": [ "name" ]
+	"required": [ "name", "main" ]
 }
