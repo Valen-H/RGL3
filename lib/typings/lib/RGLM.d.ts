@@ -1,5 +1,10 @@
 /// <reference types="node" />
 import * as rgl from "./rgl";
+import * as events from "events";
+export declare const CSI: "\x1b[";
+/**
+ * Merge polluted ANSI
+ */
 export declare function csimerger(str: string): string;
 export declare module RGLM {
     type Buf8 = Buffer & {
@@ -11,11 +16,12 @@ export declare module RGLM {
     type Buf2 = Buffer & {
         length: 2;
     };
+    function stubmap(text: string, ...data: number[]): RGLMChunk[];
     /**
      * RGLM Magic
      */
     const MAGIC: Readonly<Buf4>;
-    class RGLMChunk {
+    class RGLMChunk extends events.EventEmitter {
         #private;
         chr: string;
         fg: number;
@@ -54,7 +60,7 @@ export declare module RGLM {
          */
         get print(): string;
     }
-    class RGLMap {
+    class RGLMap extends events.EventEmitter {
         dimens: [number, number];
         parent: rgl.rgl.RGL;
         scroll: [number, number];

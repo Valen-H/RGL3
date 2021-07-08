@@ -5,9 +5,8 @@
 const c = require("chalk"),
 	assert = require("assert");
 
-console.info("Mappings loaded.");
+console.info("Test Mappings Loaded.");
 
-// (string, index/number, chunk/this) => string
 module.exports = {
 	fg: [
 		s => c.black(s),			//0
@@ -56,12 +55,7 @@ module.exports = {
 		s => c.strikethrough(s),	//7
 		s => c.visible(s),			//8
 	],
-	cust: [ ]
+	cust: []
 };
 
-/// --- STUB --- ///
-
 assert.ok(Object.values(module.exports).every(m => m.length < 0xff), "Cannot have more than 254 category mappings");
-module.exports.fg[0xff - 1] = (s, n) => `\x1b[${n}m${s}\x1b0m`;
-module.exports.bg[0xff - 1] = (s, n) => `\x1b[${n}m${s}\x1b0m`;
-module.exports.st[0xff - 1] = (s, n) => `\x1b[${n}m${s}\x1b0m`;

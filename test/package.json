@@ -1,0 +1,57 @@
+{
+    "name": "RGLTest",
+    "version": "0.1",
+    "main": "./test/main.js",
+    "keywords": [
+        ""
+    ],
+    "description": "A test package",
+    "dependencies": {
+        "rgl": "^0.1"
+    },
+    "scripts": {
+        "start": "rgl"
+    },
+    "private": true,
+    "liscence": "ISC",
+    "homepage": "",
+    "bugs": {},
+    "license": "ISC",
+    "author": "",
+    "contributors": [],
+    "files": [
+        "*"
+    ],
+    "browser": false,
+    "man": [
+        "doc"
+    ],
+    "directories": {
+        "lib": "./lib",
+        "bin": "./bin",
+        "man": "./man",
+        "doc": "./doc",
+        "example": "./test",
+        "test": "./test"
+    },
+    "typings": "./lib/typings/",
+    "typesVersions": {
+        ">=3.0": {
+            "*": [
+                "./lib/*"
+            ]
+        }
+    },
+    "repository": {},
+    "config": {
+        "port": 8081
+    },
+    "engines": {
+        "node": ">=13.0",
+        "npm": ">=4.0"
+    },
+    "engineStrict": true,
+    "os": [],
+    "cpu": [],
+    "prepack": "rm rgl-*.tgz"
+}

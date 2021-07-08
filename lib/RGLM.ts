@@ -6,13 +6,19 @@ import * as assert from "assert";
 import * as fs from "fs-extra";
 import * as path from "path";
 import * as rgl from "./rgl";
+import * as events from "events";
 
+export const CSI: "\x1b[" = "\x1b[";
+
+/**
+ * Merge polluted ANSI
+ */
 export function csimerger(str: string): string {
 	let idx: number = 0, //runner
 		csi: number = 0, //csidx valid at 2
 		csidx: [number, number] = [-1, -1]; //first csi
 	
-	function proc(str: string, i1: number, i2: number) {
+	function proc(str: string, i1: number, i2: number): [string, number] {
 		let s: string = str.slice(i1, i2);
 		
 		if (!s.endsWith('m')) {
@@ -22,7 +28,7 @@ export function csimerger(str: string): string {
 		
 		s = s.replaceAll(/m\x1b\[/g, ';');
 		
-		return str.slice(0, i1) + s + str.slice(i2);
+		return [str.slice(0, i1) + s + str.slice(i2), i1 + s.length];
 	} //proc
 	
 	if (!str) return str;
@@ -40,13 +46,13 @@ export function csimerger(str: string): string {
 		else if (csi == 2 && c == 'm') csi = 3;
 		else if (csi == 3 && c == '\x1b') csi = 4;
 		else if (csi == 4 && c == '[') csi = 2;
-		else if (csi > 1 && !/^([\d,;:]+)$/.test(c)) {
+		else if (csi > 1 && !/^([\d;]+)$/.test(c)) {
 			csidx[1] = idx - 1;
 			
 			if (csi != 2) {
-				const ncln: string = proc(cln, ...csidx);
+				const [ncln, l]: [string, number] = proc(cln, ...csidx);
 				
-				if (cln != ncln) idx = 0;
+				if (cln != ncln) idx = l;
 				
 				cln = ncln;
 			}
@@ -67,12 +73,16 @@ export module RGLM {
 	export type Buf4 = Buffer & { length: 4 };
 	export type Buf2 = Buffer & { length: 2 };
 	
+	export function stubmap(text: string, ...data: number[]): RGLMChunk[] {
+		return text.split('').map((c: string) => new RGLMChunk(c, data.shift() ?? 0xff, data.shift() ?? 0xff, data.shift() ?? 0xff, data.shift() ?? 0xff));
+	} //stubmap
+	
 	/**
 	 * RGLM Magic
 	 */
 	export const MAGIC: Readonly<Buf4> = Buffer.from("RGL\0", "ascii") as Buf4;
 	
-	export class RGLMChunk {
+	export class RGLMChunk extends events.EventEmitter {
 		
 		static #idcntr: number = 0;
 		
@@ -99,6 +109,8 @@ export module RGLM {
 		
 		constructor(public chr: string, public fg: number, public bg: number, public st: number, public cust: number) {
 			assert.ok(typeof chr == "string", "Bad Chunk");
+			
+			super();
 			
 			this.chr = chr.replaceAll('\x00', '');
 			
@@ -141,17 +153,17 @@ export module RGLM {
 		 * Chunk string representation
 		 */
 		get print(): string {
-			const fg:	(s: string) => string = RGLMChunk.mappings.fg[this.fg]		?? ((s: string): string => s),
-				bg:		(s: string) => string = RGLMChunk.mappings.bg[this.bg]		?? ((s: string): string => s),
-				st:		(s: string) => string = RGLMChunk.mappings.st[this.st]		?? ((s: string): string => s),
-				cust:	(s: string) => string = RGLMChunk.mappings.cust[this.cust]	?? ((s: string): string => s);
+			const fg:	(s: string, n?: number, t?: RGLMChunk) => string = RGLMChunk.mappings.fg[this.cust == 0xff ? 0xff : this.fg]		?? ((s: string): string => s),
+				bg:		(s: string, n?: number, t?: RGLMChunk) => string = RGLMChunk.mappings.bg[this.cust == 0xff ? 0xff : this.bg]		?? ((s: string): string => s),
+				st:		(s: string, n?: number, t?: RGLMChunk) => string = RGLMChunk.mappings.st[this.cust == 0xff ? 0xff : this.st]		?? ((s: string): string => s),
+				cust:	(s: string, n?: number, t?: RGLMChunk) => string = RGLMChunk.mappings.cust[this.cust]								?? ((s: string): string => s);
 			
-			return csimerger(cust(st(fg(bg(this.chr ?? ' ')))));
+			return csimerger(cust(st(fg(bg(this.chr ?? ' ', this.bg, this), this.fg, this), this.st, this), this.cust, this));
 		} //g-print
 		
 	} //RGLMChunk
 
-	export class RGLMap {
+	export class RGLMap extends events.EventEmitter {
 		static RGLMChunk: typeof RGLMChunk = RGLMChunk;
 		
 		/**
@@ -166,6 +178,8 @@ export module RGLM {
 		constructor(public dimens: [number, number] = [ 0, 0 ], public parent: rgl.rgl.RGL, public scroll: [number, number] = [ 0, 0 ]) {
 			assert.ok(dimens instanceof Array && dimens.length == 2 && dimens.every(d => d >= 0) &&
 				scroll instanceof Array && scroll.length == 2 && parent, "Bad Map");
+			
+			super();
 			
 			this.dimens = dimens.map(d => Number(d)) as [number, number];
 			this.scroll = scroll.map(d => Number(d)) as [number, number];
@@ -335,10 +349,10 @@ export module RGLM {
 		isIn(tx: number, ty?: number, x: number = 0, y: number = 0, sx: number = this.scroll[0], sy: number = this.scroll[1], dx: number = this.dimens[0], dy: number = this.dimens[1]): boolean {
 			if (typeof ty == "undefined") ([tx, ty] = this.calcChkCrd(tx));
 			
-			const rx: number = tx - sx,
-				ry: number = ty - sy;
+			const rx: number = tx + sx,
+				ry: number = ty + sy;
 			
-			return rx >= x && rx < dx && ry >= y && ry < dy;
+			return rx >= x && rx < Math.min(dx, this.parent.sout.columns) && ry >= y && ry < Math.min(dy, this.parent.sout.rows);
 		} //isIn
 		
 		/**
@@ -351,6 +365,8 @@ export module RGLM {
 			
 			for (let idx: number = 0; idx < this.chunks.length; idx++) {
 				const c: RGLM.RGLMChunk = this.chunks[idx];
+				
+				if (!c) continue;
 				
 				if (this.isIn(idx, undefined, x, y, sx, sy, dx, dy)) {
 					await par.move(...(this.calcChkCrd(idx).map((c: number, idx: number): number => c + [sx, sy][idx])) as [number, number]);

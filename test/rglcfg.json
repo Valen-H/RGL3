@@ -1,8 +1,11 @@
 {
-  "description": "A test package",
-  "main": "./test/main.js",
-  "version": "0.1",
-  "mappings": "./mappings.js",
-  "name": "RGLTest",
-  "$schema": "../rglcfg.schema.json"
+    "name": "RGLTest",
+    "version": "0.1",
+    "main": "./test/main.js",
+    "mappings": "./mappings.js",
+    "keywords": [
+        ""
+    ],
+    "description": "A test package",
+    "$schema": "..\\rglcfg.schema.json"
 }

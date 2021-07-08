@@ -51,11 +51,17 @@ function move(x: number = cur[0], y: number = cur[1]) {
 	if (t = map.get(...cur)) t.onrender = (_idx: number, c: mod.rglm.RGLM.RGLMChunk) => c.chr ? c.print : ' ';
 	
 	[prev[0], prev[1]] = cur;
-	cur[0] = x % (map.dimens[0] || 1);
-	cur[1] = y % (map.dimens[1] || 1);
 	
+	cur[0] = x % (map.dimens[0] || 1);
 	while (cur[0] < 0) cur[0] += map.dimens[0];
+	
+	cur[1] = y % (map.dimens[1] || 1);
 	while (cur[1] < 0) cur[1] += map.dimens[1];
+	
+	if (cur[0] + map.scroll[0] < 0) map.scroll[0] -= cur[0] + map.scroll[0];
+	else if (cur[0] + map.scroll[0] >= map.parent.sout.columns) map.scroll[0] -= cur[0] + map.scroll[0] - map.parent.sout.columns + 1;
+	if (cur[1] + map.scroll[1] < 0) map.scroll[1] -= cur[1] + map.scroll[1];
+	else if (cur[1] + map.scroll[1] >= map.parent.sout.rows) map.scroll[1] -= cur[1] + map.scroll[1] - map.parent.sout.rows + 1;
 	
 	if (t = map.get(...cur)) t.onrender = (_idx: number, _c: mod.rglm.RGLM.RGLMChunk) => chalk.inverse.italic.bold.italic('@');
 	
@@ -387,7 +393,7 @@ module.exports = async function Map(out: string, args: CommandLineOptions) {
 	}
 	
 	Rgl.writeE(`Loaded mappings: ${path.resolve(Rgl.cfg.mappings!)}`);
-	Rgl.writeE(`Writing: ${path.resolve(gout)}`);
+	Rgl.writeE(`Writing: ${gout = path.resolve(gout)}`);
 	Rgl.writeE(help());
 	
 	let acc: string = "",
