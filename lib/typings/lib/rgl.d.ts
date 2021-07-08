@@ -11,7 +11,7 @@ import * as event from "events";
 import * as tty from "tty";
 import * as rglm from "./RGLM";
 export declare module rgl {
-    const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u", mouseOn = "\u001B[?1000h\u001B[?1005h\u001B[?1003h\u001B[?1015h\u001B[?1006h", mouseOff = "\u001B[?1000l\u001B[?1005l\u001B[?1003l\u001B[?1015l\u001B[?1006l";
+    const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u", mouseOn = "\u001B[1z\u001B[?1000;1003;1005h", mouseOff = "\u001B[0z\u001B[?1000;1003;1005;1006;1015l";
     /**
      * Package Config
      */
@@ -29,7 +29,7 @@ export declare module rgl {
      */
     class RGL extends event.EventEmitter {
         #private;
-        protected cfg: RGLCfg;
+        cfg: Partial<RGLCfg>;
         /**
          * TTY streams bound to app
          */
@@ -38,7 +38,7 @@ export declare module rgl {
          * SOUT cursor state
          */
         cursor: [number, number];
-        static readonly defaults: Partial<RGLCfg>;
+        static readonly defaults: RGLCfg;
         /**
          * Special keys for convenience
          */
@@ -59,17 +59,25 @@ export declare module rgl {
             ctrlDown: Readonly<NonNullable<Buffer>>;
             ctrlRight: Readonly<NonNullable<Buffer>>;
             ctrlLeft: Readonly<NonNullable<Buffer>>;
+            fnUp: Readonly<NonNullable<Buffer>>;
+            fnDown: Readonly<NonNullable<Buffer>>;
+            fnLeft: Readonly<NonNullable<Buffer>>;
+            fnRight: Readonly<NonNullable<Buffer>>;
             ctrlShiftUp: Readonly<NonNullable<Buffer>>;
             ctrlShiftDown: Readonly<NonNullable<Buffer>>;
             ctrlShiftRight: Readonly<NonNullable<Buffer>>;
             ctrlShiftLeft: Readonly<NonNullable<Buffer>>;
+            ctrlFnUp: Readonly<NonNullable<Buffer>>;
+            ctrlFnDown: Readonly<NonNullable<Buffer>>;
+            ctrlFnRight: Readonly<NonNullable<Buffer>>;
+            ctrlFnLeft: Readonly<NonNullable<Buffer>>;
             enter: Readonly<NonNullable<Buffer>>;
             altEnter: Readonly<NonNullable<Buffer>>;
             back: Readonly<NonNullable<Buffer>>;
             del: Readonly<NonNullable<Buffer>>;
             tab: Readonly<NonNullable<Buffer>>;
         };
-        constructor(cfg: RGLCfg);
+        constructor(cfg: Partial<RGLCfg>);
         get dimens(): [number, number] | [0, 0];
         get cDpt(): number;
         get serr(): tty.WriteStream;
@@ -86,7 +94,7 @@ export declare module rgl {
         /**
          * Load package Config from File
          */
-        static load(from?: string | RGLCfg): Promise<RGL>;
+        static load(from?: string | Partial<RGLCfg>): Promise<RGL>;
         /**
          * Store package Config to File
          */
@@ -94,7 +102,7 @@ export declare module rgl {
         /**
          * Launch package entry
          */
-        exec(from?: Nullable<string>): any;
+        exec(from?: Nullable<string>, ...data: any[]): any;
         /**
          * Write-and-count to SOUT
          */
@@ -120,27 +128,24 @@ export declare module rgl {
         once(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
         once(eventname: "write", listener: (d: string | Uint8Array) => void): this;
         once(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
-        once(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
-        once(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
-        once(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+        once(eventname: "key", listener: (key: string) => string): this;
+        once(eventname: "rawkey", listener: (key: Buffer) => Buffer): this;
         once(eventname: string | symbol, listener: (...args: any[]) => void): this;
         on(eventname: "log", listener: (...args: any[]) => void): this;
         on(eventname: "debug", listener: (...args: any[]) => void): this;
         on(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
         on(eventname: "write", listener: (d: string | Uint8Array) => void): this;
         on(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
-        on(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
-        on(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
-        on(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+        on(eventname: "key", listener: (key: string) => string): this;
+        on(eventname: "rawkey", listener: (key: Buffer) => Buffer): this;
         on(eventname: string | symbol, listener: (...args: any[]) => void): this;
         emit(eventname: "log", ...args: any[]): any;
         emit(eventname: "debug", ...args: any[]): any;
         emit(eventname: "clear", lines: number, dir: tty.Direction, rel: boolean, out: boolean): any;
         emit(eventname: "write", d: string | Uint8Array): string;
         emit(eventname: "move", x: number, y: number, rel: boolean): boolean;
-        emit(eventname: "key", key: string, isalt: boolean, s: string): string;
-        emit(eventname: "rawkey", key: Buffer, isalt: boolean, s: Buffer): Buffer;
-        emit(eventname: "rawctrlkey", key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer): Buffer;
+        emit(eventname: "key", key: string): string;
+        emit(eventname: "rawkey", key: Buffer): Buffer;
         emit(eventname: string | symbol, ...args: any[]): boolean;
     }
 }

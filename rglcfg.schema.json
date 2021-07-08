@@ -5,28 +5,38 @@
 	"properties": {
 		"name": {
 			"type": "string",
-			"description": "Name of package"
+			"description": "Name of package",
+			"contentEncoding": "ascii"
 		},
 		"version": {
 			"type": "string",
-			"description": "Semver versioning"
+			"description": "Semver versioning",
+			"contentEncoding": "ascii"
 		},
 		"description": {
 			"type": "string",
-			"description": "Package description"
+			"description": "Package description",
+			"contentEncoding": "ascii"
 		},
 		"main": {
 			"type": "string",
-			"description": "Entry of package"
+			"description": "Entry of package",
+			"contentEncoding": "ascii",
+			"format": "uri-reference",
+			"default": "./main.js"
 		},
 		"mappings": {
 			"type": "string",
-			"description": "Path to mappings.js"
+			"description": "Path to mappings.js",
+			"contentEncoding": "ascii",
+			"format": "uri-reference"
 		},
 		"keywords": {
 			"type": "array",
 			"description": "Keywords of package"
 		}
 	},
-	"required": [ "name", "main" ]
+	"required": [ "name", "main" ],
+	"minProperties": 2,
+	"additionalProperties": true
 }

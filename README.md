@@ -22,7 +22,7 @@ Each RGL package contains a config.
 * name: string - Name of the Package
 * description: string - Description of the Package
 * version: number? - Revision number
-* entry: path=main.js - Entry of package
+* main: path=main.js - Entry of package
 * mappings: path=mappings.json - map of fg/bg/stl
 
 ### RGLM format
@@ -43,18 +43,18 @@ meta = ?
 ## RGL binary
 
 ```ts
-rgl[ path<string=.>] - play package at path - if directory, search rglcfg.json/package.json, else play
+rgl[play path<string=.>] - play package at path - if directory, search rglcfg.json/package.json, else play
 rgl map[ path<string>] - Display/Edit map interactively
 rgl make[ name<string>] - make new package - Give directory name if not provided
 ```
 
-### RGL `map`
+## Usage
 
-```ts
-Move Line Up/Down/Left/Right
-Shift Line Horizontally/Vertically
-Delete Line Horizontally/Vertically
-Add Line Blank Horizontally/Vertically
-Move Chunk based on cursor
-Delete Chunk on cursor
+```bash
+rgl c myNewGame
 ```
+
+After that edit the `./main.js` (and other files), run the outcome with `npm start`.
+The Engine instance and module is passed as parameters to main's default export function.
+
+> *More documentation soon...*

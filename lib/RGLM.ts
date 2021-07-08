@@ -1,9 +1,65 @@
+/// <reference path="./rgl">
+
 "use strict";
 
 import * as assert from "assert";
 import * as fs from "fs-extra";
 import * as path from "path";
 import * as rgl from "./rgl";
+
+export function csimerger(str: string): string {
+	let idx: number = 0, //runner
+		csi: number = 0, //csidx valid at 2
+		csidx: [number, number] = [-1, -1]; //first csi
+	
+	function proc(str: string, i1: number, i2: number) {
+		let s: string = str.slice(i1, i2);
+		
+		if (!s.endsWith('m')) {
+			s += 'm';
+			i2++;
+		}
+		
+		s = s.replaceAll(/m\x1b\[/g, ';');
+		
+		return str.slice(0, i1) + s + str.slice(i2);
+	} //proc
+	
+	if (!str) return str;
+	
+	let cln = str;
+	
+	do {
+		const c: string = cln[idx] || '';
+		
+		if (!csi && c == '\x1b') {
+			csi = 1;
+			csidx[0] = idx;
+		} else if (csi == 1 && c == '[') csi = 2;
+		else if (csi == 1) csi = 0;
+		else if (csi == 2 && c == 'm') csi = 3;
+		else if (csi == 3 && c == '\x1b') csi = 4;
+		else if (csi == 4 && c == '[') csi = 2;
+		else if (csi > 1 && !/^([\d,;:]+)$/.test(c)) {
+			csidx[1] = idx - 1;
+			
+			if (csi != 2) {
+				const ncln: string = proc(cln, ...csidx);
+				
+				if (cln != ncln) idx = 0;
+				
+				cln = ncln;
+			}
+			
+			csi = 0;
+			csidx = [-1, -1];
+		}
+		
+		idx++;
+	} while(idx <= cln.length);
+	
+	return cln;
+} //csimerger
 
 export module RGLM {
 	
@@ -90,7 +146,7 @@ export module RGLM {
 				st:		(s: string) => string = RGLMChunk.mappings.st[this.st]		?? ((s: string): string => s),
 				cust:	(s: string) => string = RGLMChunk.mappings.cust[this.cust]	?? ((s: string): string => s);
 			
-			return cust(st(fg(bg(this.chr ?? ' '))));
+			return csimerger(cust(st(fg(bg(this.chr ?? ' ')))));
 		} //g-print
 		
 	} //RGLMChunk
@@ -253,6 +309,8 @@ export module RGLM {
 		 * Swap Chunks locations
 		 */
 		swap(c1: RGLMChunk, c2: RGLMChunk): this {
+			if (c1 == c2) return this;
+			
 			const ci1: number = this.calcChkIdx(c1);
 			assert.ok(ci1 >= 0, "Bad idx");
 			const cc1: RGLMChunk = this.chunks.splice(ci1, 1)[0];

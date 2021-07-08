@@ -21,8 +21,7 @@ mod.rgl.RGL.load("./test/rglcfg.json").then(rgl => {
 		await map.stamp();
 	});
 	
-	rgl.on("rawctrlkey", (k, c, a, b) => {
-		if (a) rgl.writeE("ALT");
+	rgl.on("rawkey", (k) => {
 		if (!k.compare(mod.rgl.RGL.special_keys.ctrlC))			process.exit(0);
 		else if (!k.compare(mod.rgl.RGL.special_keys.ctrlV))	rgl.writeE("PASTE");
 		else if (!k.compare(mod.rgl.RGL.special_keys.up))		rgl.writeE("UP");
@@ -30,7 +29,7 @@ mod.rgl.RGL.load("./test/rglcfg.json").then(rgl => {
 		else if (!k.compare(mod.rgl.RGL.special_keys.left))		rgl.writeE("LEFT");
 		else if (!k.compare(mod.rgl.RGL.special_keys.right))	rgl.writeE("RIGHT");
 		else if (!k.compare(mod.rgl.RGL.special_keys.enter))	rgl.writeE("ENTER");
-		else	rgl.writeE(util.inspect(k), '\t', b.toString("utf8"));
+		else	rgl.writeE(util.inspect(k), '\t');
 	});
 	rgl.on("clear", (...o) => rgl.writeE("CLEAR", ...o));
 });

@@ -31,8 +31,8 @@ export module rgl {
 		scrollDown = (by: number | string = 1) => `\x1b[${by}T`,
 		save = `\x1b7\x1b[s`,
 		restore = `\x1b8\x1b[u`,
-		mouseOn = `\x1b[?1000h\x1b[?1005h\x1b[?1003h\x1b[?1015h\x1b[?1006h`,
-		mouseOff = `\x1b[?1000l\x1b[?1005l\x1b[?1003l\x1b[?1015l\x1b[?1006l`;
+		mouseOn = `\x1b[1z\x1b[?1000;1003;1005h`,
+		mouseOff = `\x1b[0z\x1b[?1000;1003;1005;1006;1015l`;
 	
 	/**
 	 * Package Config
@@ -75,7 +75,7 @@ export module rgl {
 		 */
 		#_loadedFrom: string = "";
 		
-		static readonly defaults: Partial<RGLCfg> = {
+		static readonly defaults: RGLCfg = {
 			description: "",
 			main: "./main.js",
 			version: "0.1",
@@ -104,10 +104,18 @@ export module rgl {
 			ctrlDown:		Readonly<NonNullable<Buffer>>;
 			ctrlRight:		Readonly<NonNullable<Buffer>>;
 			ctrlLeft:		Readonly<NonNullable<Buffer>>;
+			fnUp:			Readonly<NonNullable<Buffer>>;
+			fnDown:			Readonly<NonNullable<Buffer>>;
+			fnLeft:			Readonly<NonNullable<Buffer>>;
+			fnRight:		Readonly<NonNullable<Buffer>>;
 			ctrlShiftUp:	Readonly<NonNullable<Buffer>>;
 			ctrlShiftDown:	Readonly<NonNullable<Buffer>>;
 			ctrlShiftRight:	Readonly<NonNullable<Buffer>>;
 			ctrlShiftLeft:	Readonly<NonNullable<Buffer>>;
+			ctrlFnUp:		Readonly<NonNullable<Buffer>>;
+			ctrlFnDown:		Readonly<NonNullable<Buffer>>;
+			ctrlFnRight:	Readonly<NonNullable<Buffer>>;
+			ctrlFnLeft:		Readonly<NonNullable<Buffer>>;
 			enter:			Readonly<NonNullable<Buffer>>;
 			altEnter:		Readonly<NonNullable<Buffer>>;
 			back:			Readonly<NonNullable<Buffer>>;
@@ -130,10 +138,18 @@ export module rgl {
 			ctrlDown:		Buffer.from("1b5b313b3542",	"hex"),
 			ctrlRight:		Buffer.from("1b5b313b3543",	"hex"),
 			ctrlLeft:		Buffer.from("1b5b313b3544",	"hex"),
+			fnUp:			Buffer.from("1b5b357e",		"hex"),
+			fnDown:			Buffer.from("1b5b367e",		"hex"),
+			fnRight:		Buffer.from("1b5b347e",		"hex"),
+			fnLeft:			Buffer.from("1b5b317e",		"hex"),
 			ctrlShiftUp:	Buffer.from("1b5b313b3641",	"hex"),
 			ctrlShiftDown:	Buffer.from("1b5b313b3642",	"hex"),
 			ctrlShiftRight:	Buffer.from("1b5b313b3643",	"hex"),
 			ctrlShiftLeft:	Buffer.from("1b5b313b3644",	"hex"),
+			ctrlFnUp:		Buffer.from("1b5b353b357e",	"hex"),
+			ctrlFnDown:		Buffer.from("1b5b363b357e",	"hex"),
+			ctrlFnRight:	Buffer.from("1b5b343b357e",	"hex"),
+			ctrlFnLeft:		Buffer.from("1b5b313b357e",	"hex"),
 			enter:			Buffer.from("0d",			"hex"), //0d = \r, 0a = \n
 			altEnter:		Buffer.from("1b0d",			"hex"), //+ctrlAltEnter +shiftAltEnter
 			back:			Buffer.from("08",			"hex"), //+ctrlH
@@ -141,15 +157,15 @@ export module rgl {
 			tab:			Buffer.from("09",			"hex"),
 		};
 		
-		constructor(protected cfg: RGLCfg) {
+		constructor(public cfg: Partial<RGLCfg>) {
 			super();
 			
 			this.cfg = Object.assign(Object.assign(Object.create(null), RGL.defaults), cfg);
 			
 			assert.ok(this.cfg.name, "RGL 'name' must be provided in the config");
 			
-			this.cfg.main		= "./" + path.win32.normalize(this.cfg.main || "./main.js");
-			this.cfg.mappings	= "./" + path.win32.normalize(this.cfg.mappings || "./mappings.js");
+			this.cfg.main		= "./" + path.normalize(this.cfg.main		|| RGL.defaults.main);
+			this.cfg.mappings	= "./" + path.normalize(this.cfg.mappings	|| RGL.defaults.mappings || "./mappings.js");
 			
 			//process.stdout.write(`\x1b]0;${this.cfg.name}\a`);
 			process.title = this.cfg.name || process.title || "RGL";
@@ -179,14 +195,14 @@ export module rgl {
 		parseMappings(from: Nullable<string> = this.cfg.mappings): Object {
 			assert.ok(from, "'mappings' must be a valid path");
 			
-			from = path.win32.join(process.cwd(), from);
+			from = path.join(process.cwd(), from);
 			
 			delete require.cache[from];
 			
 			try {
 				return rglm.RGLM.RGLMChunk.mappings = require(from);
 			} catch(e) {
-				return rglm.RGLM.RGLMChunk.mappings = require(path.join(__dirname, "../../mappings.js"));
+				return rglm.RGLM.RGLMChunk.mappings = require(this.cfg.mappings = path.join(__dirname, "../../mappings.js"));
 			}
 		} //parseMappings
 		
@@ -206,9 +222,9 @@ export module rgl {
 			
 			if (which.isRaw) {
 				which.on("data", this._bound.sinbind = (key: Buffer) => {
-					this.emit("rawkey", key, key.length > 1 && key[0] == 0x1b, key.length > 1 ? key.slice(1) : key.slice(0));
-					this.emit("rawctrlkey", key, Buffer.from([(Array.from(key.values()).pop() ?? 0) + 0x61 - 1]), key.length > 1 && key[0] == 0x1b, key.length > 1 ? key.slice(1) : key.slice(0));
-					this.emit("key", key.toString("utf8"), key.length > 1 && key[0] == 0x1b, (key.length > 1 ? key.slice(1) : key.slice(0)).toString("utf8"));
+					this.emit("rawkey", key);
+					this.emit("rawctrlkey", key);
+					this.emit("key", key.toString("utf8"));
 				});
 			}
 			
@@ -226,16 +242,30 @@ export module rgl {
 		/**
 		 * Load package Config from File
 		 */
-		static async load(from: string | RGLCfg = "./package.json"): Promise<RGL> {
-			if (typeof from == "string") {
-				from = path.win32.resolve(from);
+		static async load(from?: string | Partial<RGLCfg>): Promise<RGL> {
+			if (typeof from != "object") {
+				let out: RGL;
 				
-				let out: RGL = new RGL(await fs.readJSON(from, {
-					encoding: "ascii",
-					flag: "r"
-				}));
+				if (from) {
+					out = new RGL(await fs.readJSON(from, {
+						encoding: "ascii",
+						flag: "r"
+					}));
+				} else {
+					try {
+						out = new RGL(await fs.readJSON(from = "./rglcfg.json", {
+							encoding: "ascii",
+							flag: "r"
+						}));
+					} catch(e) {
+						out = new RGL(await fs.readJSON(from = "package.json", {
+							encoding: "ascii",
+							flag: "r"
+						}));
+					}
+				}
 				
-				out.#_loadedFrom = from;
+				out.#_loadedFrom = path.resolve(from);
 				
 				return out;
 			} else return new RGL(from);
@@ -243,7 +273,7 @@ export module rgl {
 		/**
 		 * Store package Config to File
 		 */
-		async store(to: string = this.#_loadedFrom || "./package.json", repl?: ((this: any, key: string, value: number) => any), pad: number = 2): Promise<any> {
+		async store(to: string = this.#_loadedFrom || "./rglcfg.json", repl?: ((this: any, key: string, value: number) => any), pad: number = 2): Promise<any> {
 			assert.ok(to && typeof to == "string", "'config' must be a valid path");
 			
 			return await fs.writeJSON(to, this.cfg, {
@@ -259,17 +289,17 @@ export module rgl {
 		/**
 		 * Launch package entry
 		 */
-		exec(from: Nullable<string> = this.cfg.main || "./main.js"): any{
+		exec(from: Nullable<string> = this.cfg.main || "./main.js", ...data: any[]): any{
 			assert.ok(from, "'main' must be a valid path");
 			
-			from = path.win32.join(process.cwd(), from);
+			from = path.join(process.cwd(), from);
 			
 			delete require.cache[from];
 			
 			try {
-				return require(from)(this, module);
+				return require(from)(this, module, ...data);
 			} catch(e) {
-				return require(path.win32.join(process.cwd(), "./main.js"))(this, module);
+				return require(this.cfg.main = path.join(process.cwd(), "./main.js"))(this, module, ...data);
 			}
 		} //exec
 		
@@ -284,6 +314,8 @@ export module rgl {
 			
 			const chs: string[] = d.split('\n'),
 				len: number = chs.length - 1;
+			
+			d = d.replaceAll('\n', os.EOL);
 			
 			if (len >= 1) this.cursor[0] = chs[len].length;
 			else this.cursor[0] += chs[len].length;
@@ -354,15 +386,19 @@ export module rgl {
 							this.move(...sav, false).then(() => res(out));
 						});
 					});
-				} else if (typeof lines == "number" && lines < 0)
+				} else if (typeof lines == "number" && lines < 0) {
 					out = readline.clearLine(this.sout, dir, () => {
 						this.move(...sav, false).then(() => res(out));
 					});
-				else if (typeof lines == "number") {
+				} else if (typeof lines == "number") {
 					this.move(0, lines, rel).then(() => {
 						out = readline.clearLine(this.sout, dir, () => {
 							this.move(...sav, false).then(() => res(out));
 						});
+					});
+				} else if (!lines.length) {
+					out = readline.clearScreenDown(this.sout, () => {
+						this.move(...sav, false).then(() => res(out));
 					});
 				} else
 					return Promise.all(lines.map(l => this.clear(l, dir, rel))).then(bs => res(bs.every(b => b)), rej);
@@ -376,21 +412,19 @@ export module rgl {
 		once(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
 		once(eventname: "write", listener: (d: string | Uint8Array) => void): this;
 		once(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
-		once(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
-		once(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
-		once(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+		once(eventname: "key", listener: (key: string) => string): this;
+		once(eventname: "rawkey", listener: (key: Buffer) => Buffer): this;
 		once(eventname: string | symbol, listener: (...args: any[]) => void): this;
 		once(eventname: string | symbol, listener: (...args: any[]) => void): this {
-			return super.on(eventname, listener);
+			return super.once(eventname, listener);
 		} //once
 		on(eventname: "log", listener: (...args: any[]) => void): this;
 		on(eventname: "debug", listener: (...args: any[]) => void): this;
 		on(eventname: "clear", listener: (lines: number, dir: tty.Direction, rel: boolean, out: boolean) => void): this;
 		on(eventname: "write", listener: (d: string | Uint8Array) => void): this;
 		on(eventname: "move", listener: (x: number, y: number, rel: boolean) => void): this;
-		on(eventname: "key", listener: (key: string, isalt: boolean, s: string) => void): this;
-		on(eventname: "rawkey", listener: (key: Buffer, isalt: boolean, s: Buffer) => void): this;
-		on(eventname: "rawctrlkey", listener: (key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer) => void): this;
+		on(eventname: "key", listener: (key: string) => string): this;
+		on(eventname: "rawkey", listener: (key: Buffer) => Buffer): this;
 		on(eventname: string | symbol, listener: (...args: any[]) => void): this;
 		on(eventname: string | symbol, listener: (...args: any[]) => void): this {
 			return super.on(eventname, listener);
@@ -400,9 +434,8 @@ export module rgl {
 		emit(eventname: "clear", lines: number, dir: tty.Direction, rel: boolean, out: boolean): any;
 		emit(eventname: "write", d: string | Uint8Array): string;
 		emit(eventname: "move", x: number, y: number, rel: boolean): boolean;
-		emit(eventname: "key", key: string, isalt: boolean, s: string): string;
-		emit(eventname: "rawkey", key: Buffer, isalt: boolean, s: Buffer): Buffer;
-		emit(eventname: "rawctrlkey", key: Buffer, ctrlkey: Buffer, isalt: boolean, s: Buffer): Buffer;
+		emit(eventname: "key", key: string): string;
+		emit(eventname: "rawkey", key: Buffer): Buffer;
 		emit(eventname: string | symbol, ...args: any[]): boolean;
 		emit(eventname: string | symbol, ...args: any[]): any {
 			return super.emit(eventname, ...args);

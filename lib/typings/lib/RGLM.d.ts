@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import * as rgl from "./rgl";
+export declare function csimerger(str: string): string;
 export declare module RGLM {
     type Buf8 = Buffer & {
         length: 8;
