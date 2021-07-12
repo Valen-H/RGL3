@@ -21,6 +21,8 @@ import * as path from "path";
 import * as rglm from "./RGLM";
 import * as util from "util";
 
+export const eolconv: RegExp = /((?<!\r)\n(?!\r)|(?<!\n)\r(?!\n)|\r\n|\n\r)/gmis;
+
 export module rgl {
 	
 	const dbg = util.debuglog("RGL");
@@ -310,7 +312,7 @@ export module rgl {
 			if (d instanceof Buffer) d = d.toString("ascii");
 			else if (d instanceof Uint8Array) d = d.join('');
 			
-			d = d.toString().replaceAll('\t', ' '.repeat(4)).replaceAll(/((?<!\r)\n(?!\r)|(?<!\n)\r(?!\n)|\r\n|\n\r)/gmis, '\n');
+			d = d.toString().replaceAll('\t', ' '.repeat(4)).replaceAll(eolconv, '\n');
 			
 			const chs: string[] = d.split('\n'),
 				len: number = chs.length - 1;

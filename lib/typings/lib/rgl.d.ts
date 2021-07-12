@@ -10,6 +10,7 @@ export declare type NullableArray<T> = [] | T;
 import * as event from "events";
 import * as tty from "tty";
 import * as rglm from "./RGLM";
+export declare const eolconv: RegExp;
 export declare module rgl {
     const scrollUp: (by?: number | string) => string, scrollDown: (by?: number | string) => string, save = "\u001B7\u001B[s", restore = "\u001B8\u001B[u", mouseOn = "\u001B[1z\u001B[?1000;1003;1005h", mouseOff = "\u001B[0z\u001B[?1000;1003;1005;1006;1015l";
     /**

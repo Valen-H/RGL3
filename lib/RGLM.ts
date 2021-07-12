@@ -7,6 +7,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import * as rgl from "./rgl";
 import * as events from "events";
+import * as stripAnsi from "strip-ansi";
 
 export const CSI: "\x1b[" = "\x1b[";
 
@@ -76,6 +77,21 @@ export module RGLM {
 	export function stubmap(text: string, ...data: number[]): RGLMChunk[] {
 		return text.split('').map((c: string) => new RGLMChunk(c, data.shift() ?? 0xff, data.shift() ?? 0xff, data.shift() ?? 0xff, data.shift() ?? 0xff));
 	} //stubmap
+	/**
+	 * Make a Map out of pure text, for alerts/textboxes
+	 */
+	export function boxed(text: string, par: Readonly<rgl.rgl.RGL>, cx: number, cy: number): RGLMap {
+		let ret: RGLMap = RGLMap.blank(par);
+		const arr: string[] = ret.raw.replaceAll(rgl.eolconv, '\n').split('\n');
+		
+		ret.place(stubmap(text));
+		ret.dimens[0]	= arr.sort((a, b) => a.length - b.length).pop()?.length ?? 0;
+		ret.dimens[1]	= arr.length;
+		ret.clip[0]		= cx ?? ret.dimens[0];
+		ret.clip[1]		= cy ?? ret.dimens[1];
+		
+		return ret;
+	} //boxed
 	
 	/**
 	 * RGLM Magic
@@ -175,7 +191,7 @@ export module RGLM {
 			[key: string]: string;
 		} = { };
 		
-		constructor(public dimens: [number, number] = [ 0, 0 ], public parent: rgl.rgl.RGL, public scroll: [number, number] = [ 0, 0 ]) {
+		constructor(public dimens: [number, number] = [ 0, 0 ], public parent: Readonly<rgl.rgl.RGL>, public scroll: [number, number] = [ 0, 0 ], public clip: [number, number, number, number] = [ dimens[0], dimens[1], 0, 0 ]) {
 			assert.ok(dimens instanceof Array && dimens.length == 2 && dimens.every(d => d >= 0) &&
 				scroll instanceof Array && scroll.length == 2 && parent, "Bad Map");
 			
@@ -188,8 +204,8 @@ export module RGLM {
 		/**
 		 * Create empty/blank Map
 		 */
-		static blank(par: rgl.rgl.RGL) {
-			return new RGLM.RGLMap([ 0, 0 ], par);
+		static blank(par: Readonly<rgl.rgl.RGL>): RGLMap {
+			return new RGLM.RGLMap([ 0, 0 ], par, [ 0, 0 ], [ 0, 0, 0, 0 ]);
 		} //blank
 		
 		/**
@@ -279,6 +295,43 @@ export module RGLM {
 		} //g-print
 		
 		/**
+		 * Get raw chunks
+		 */
+		get raw(): string {
+			return this.chunks.map((c: RGLMChunk): string => c.chr).join('');
+		} //g-raw
+		
+		scrollTo(sx: number = this.scroll[0], sy: number = this.scroll[1]): this {
+			this.scroll[0] = sx;
+			this.scroll[1] = sy;
+			
+			return this;
+		} //scrollTo
+		scrollBy(dsx: number = 0, dsy: number = 0): this {
+			return this.scrollTo(this.scroll[0] + dsx, this.scroll[1] + dsy);
+		} //scrollBy
+		resizeTo(dx: number = this.dimens[0], dy: number = this.dimens[1]): this {
+			this.dimens[0] = Math.min(dx, 0);
+			this.dimens[1] = Math.min(dy, 0);
+			
+			return this;
+		} //resizeTo
+		resizeBy(ddx: number = 0, ddy: number = 0): this {
+			return this.resizeTo(this.dimens[0] + ddx, this.dimens[1] + ddy);
+		} //resizeBy
+		clipTo(cx: number = this.clip[0], cy: number = this.clip[1], crx: number = this.clip[2], cry: number = this.clip[3]): this {
+			this.clip[2] = Math.max(crx, cx, 0);
+			this.clip[3] = Math.max(cry, cy, 0);
+			this.clip[0] = Math.max(cx, this.clip[2]);
+			this.clip[1] = Math.max(cy, this.clip[3]);
+			
+			return this;
+		} //clipTo
+		clipBy(dcx: number = 0, dcy: number = 0, dcrx: number = 0, dcry: number = 0): this {
+			return this.clipTo(this.clip[0] + dcx, this.clip[1] + dcy, this.clip[2] + dcrx, this.clip[3] + dcry);
+		} //clipBy
+		
+		/**
 		 * Calculate Viewport coordinates from chunklist index
 		 */
 		calcChkIdx(x: number | RGLMChunk, y: number = 0): number {
@@ -312,7 +365,7 @@ export module RGLM {
 		/**
 		 * Place a Chunk
 		 */
-		place(c: RGLMChunk[], n: number | RGLMChunk = this.chunks.length, x?: number, repl: number = 1) {
+		place(c: Readonly<RGLMChunk>[], n: number | RGLMChunk = this.chunks.length, x?: number, repl: number = 1) {
 			const idx: number = typeof x == "undefined" ? (n instanceof RGLMChunk ? this.calcChkIdx(n) : n) : this.calcChkIdx(n, x);
 			
 			assert.ok(idx >= 0, "Bad idx");
@@ -322,7 +375,7 @@ export module RGLM {
 		/**
 		 * Swap Chunks locations
 		 */
-		swap(c1: RGLMChunk, c2: RGLMChunk): this {
+		swap(c1: Readonly<RGLMChunk>, c2: Readonly<RGLMChunk>): this {
 			if (c1 == c2) return this;
 			
 			const ci1: number = this.calcChkIdx(c1);
@@ -346,19 +399,19 @@ export module RGLM {
 		 * s* - viewport scroll
 		 * * - viewport
 		 */
-		isIn(tx: number, ty?: number, x: number = 0, y: number = 0, sx: number = this.scroll[0], sy: number = this.scroll[1], dx: number = this.dimens[0], dy: number = this.dimens[1]): boolean {
+		isIn(tx: number, ty?: number, x: number = this.clip[2], y: number = this.clip[3], sx: number = this.scroll[0], sy: number = this.scroll[1], dx: number = this.dimens[0], dy: number = this.dimens[1], cx: number = this.clip[0], cy: number = this.clip[1], crx: number = this.clip[2], cry: number = this.clip[3]): boolean {
 			if (typeof ty == "undefined") ([tx, ty] = this.calcChkCrd(tx));
 			
 			const rx: number = tx + sx,
 				ry: number = ty + sy;
 			
-			return rx >= x && rx < Math.min(dx, this.parent.sout.columns) && ry >= y && ry < Math.min(dy, this.parent.sout.rows);
+			return rx >= Math.max(x, crx) && rx < Math.min(cx, dx, this.parent.sout.columns) && ry >= Math.max(y, cry) && ry < Math.min(cy, dy, this.parent.sout.rows);
 		} //isIn
 		
 		/**
 		 * Imprint Map on RGL
 		 */
-		async stamp(dx: number = this.dimens[0], dy: number = this.dimens[1], x: number = 0, y: number = 0, sx: number = this.scroll[0], sy: number = this.scroll[1], par: rgl.rgl.RGL = this.parent): Promise<this> {
+		async stamp(dx: number = this.dimens[0], dy: number = this.dimens[1], x: number = this.clip[2], y: number = this.clip[3], sx: number = this.scroll[0], sy: number = this.scroll[1], par: Readonly<rgl.rgl.RGL> = this.parent, cx: number = this.clip[0], cy: number = this.clip[1]): Promise<this> {
 			assert.ok(par, "Bad parent");
 			
 			const sav: [number, number] = [...par.cursor];
@@ -368,7 +421,7 @@ export module RGLM {
 				
 				if (!c) continue;
 				
-				if (this.isIn(idx, undefined, x, y, sx, sy, dx, dy)) {
+				if (this.isIn(idx, undefined, x, y, sx, sy, dx, dy, cx, cy)) {
 					await par.move(...(this.calcChkCrd(idx).map((c: number, idx: number): number => c + [sx, sy][idx])) as [number, number]);
 					par.write(c.onrender(idx, c, this));
 				}

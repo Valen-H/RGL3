@@ -7,3 +7,4 @@ readme.htm
 *.tsbuildinfo
 *.rglm
 *.tgz
+.npmrc

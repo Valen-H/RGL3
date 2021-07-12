@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/// <reference path="@types/command-line-args">
 
 "use strict";
 
@@ -15,7 +14,8 @@ let qtcn: boolean = false,
 	map: mod.rglm.RGLM.RGLMap,
 	gout: string,
 	cur: [number, number] = [ 0, 0 ],
-	prev: [number, number] = [ 0, 0 ];
+	prev: [number, number] = [ 0, 0 ],
+	a: number = 0;
 
 function help(): string {
 	return `Commands:
@@ -115,7 +115,9 @@ function quit(): void {
 } //quit
 
 async function command(acc: string) {
-	let comm: string[] = acc.replaceAll(/(?<=(?:(?:(?<!\\)\.)|^))(.+?)(?<!\\)\|(\d+)/gmis, (m: string, p1: string, p2: string, off: number, str: string): string => (p1 + '.').repeat(Number(p2 || 1))).replaceAll(/(?<!\\)\$/gmis, '.').split(/(?<!\\)\./gmis).map(c => c.replaceAll(/(?<!\\)\\/gmi, '').replaceAll("\\\\", "\\"));
+	let comm: string[] = acc.replaceAll(/(?<=(?:(?:(?<!\\)\.)|^))(.+?)(?<!\\)\|(\d+)/gmis, (m: string, p1: string, p2: string, off: number, str: string): string => (p1 + '.').repeat(Number(p2 || 1))).replaceAll(/(?<!\\)\$/gmis, '.').split(/(?<!\\)\./gmis).map(c => c.replaceAll(/(?<!\\)\\/gmi, '').replaceAll("\\\\", "\\")),
+		b: number = a,
+		c: number = 0;
 	
 	for (const com of comm) {
 		const args: string = (com.match(/\[(.*)$/mis) || [ ])[1],
@@ -139,8 +141,8 @@ async function command(acc: string) {
 			if (args) {
 				const s: number[] = args.split(',').map(Number);
 				
-				map.dimens[0] = Math.max(typeof s[0] == "number" ? s[0] : map.dimens[0], 0);
-				map.dimens[1] = Math.max(typeof s[1] == "number" ? s[1] : map.dimens[1], 0);
+				map.clip[0] = map.dimens[0] = Math.max(typeof s[0] == "number" ? s[0] : map.dimens[0], 0);
+				map.clip[1] = map.dimens[1] = Math.max(typeof s[1] == "number" ? s[1] : map.dimens[1], 0);
 				
 				await pad();
 			}
@@ -353,7 +355,13 @@ async function command(acc: string) {
 			moveBy(1);
 			await command("d.r");
 		}
+		
+		b++;
+		a++;
+		c++;
 	}
+	
+	a = 0;
 } //command
 
 async function inp(acc: string, acidx: number) {

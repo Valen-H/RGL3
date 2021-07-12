@@ -18,6 +18,10 @@ export declare module RGLM {
     };
     function stubmap(text: string, ...data: number[]): RGLMChunk[];
     /**
+     * Make a Map out of pure text, for alerts/textboxes
+     */
+    function boxed(text: string, par: Readonly<rgl.rgl.RGL>, cx: number, cy: number): RGLMap;
+    /**
      * RGLM Magic
      */
     const MAGIC: Readonly<Buf4>;
@@ -62,8 +66,9 @@ export declare module RGLM {
     }
     class RGLMap extends events.EventEmitter {
         dimens: [number, number];
-        parent: rgl.rgl.RGL;
+        parent: Readonly<rgl.rgl.RGL>;
         scroll: [number, number];
+        clip: [number, number, number, number];
         static RGLMChunk: typeof RGLMChunk;
         /**
          * Map Chunks
@@ -73,11 +78,11 @@ export declare module RGLM {
         meta: {
             [key: string]: string;
         };
-        constructor(dimens: [number, number], parent: rgl.rgl.RGL, scroll?: [number, number]);
+        constructor(dimens: [number, number], parent: Readonly<rgl.rgl.RGL>, scroll?: [number, number], clip?: [number, number, number, number]);
         /**
          * Create empty/blank Map
          */
-        static blank(par: rgl.rgl.RGL): RGLMap;
+        static blank(par: Readonly<rgl.rgl.RGL>): RGLMap;
         /**
          * Craft Map from fs
          */
@@ -95,6 +100,16 @@ export declare module RGLM {
          */
         get print(): string;
         /**
+         * Get raw chunks
+         */
+        get raw(): string;
+        scrollTo(sx?: number, sy?: number): this;
+        scrollBy(dsx?: number, dsy?: number): this;
+        resizeTo(dx?: number, dy?: number): this;
+        resizeBy(ddx?: number, ddy?: number): this;
+        clipTo(cx?: number, cy?: number, crx?: number, cry?: number): this;
+        clipBy(dcx?: number, dcy?: number, dcrx?: number, dcry?: number): this;
+        /**
          * Calculate Viewport coordinates from chunklist index
          */
         calcChkIdx(x: number | RGLMChunk, y?: number): number;
@@ -109,11 +124,11 @@ export declare module RGLM {
         /**
          * Place a Chunk
          */
-        place(c: RGLMChunk[], n?: number | RGLMChunk, x?: number, repl?: number): RGLMChunk[];
+        place(c: Readonly<RGLMChunk>[], n?: number | RGLMChunk, x?: number, repl?: number): RGLMChunk[];
         /**
          * Swap Chunks locations
          */
-        swap(c1: RGLMChunk, c2: RGLMChunk): this;
+        swap(c1: Readonly<RGLMChunk>, c2: Readonly<RGLMChunk>): this;
         /**
          * Check if Chunk is inside bounds
          *
@@ -122,11 +137,11 @@ export declare module RGLM {
          * s* - viewport scroll
          * * - viewport
          */
-        isIn(tx: number, ty?: number, x?: number, y?: number, sx?: number, sy?: number, dx?: number, dy?: number): boolean;
+        isIn(tx: number, ty?: number, x?: number, y?: number, sx?: number, sy?: number, dx?: number, dy?: number, cx?: number, cy?: number, crx?: number, cry?: number): boolean;
         /**
          * Imprint Map on RGL
          */
-        stamp(dx?: number, dy?: number, x?: number, y?: number, sx?: number, sy?: number, par?: rgl.rgl.RGL): Promise<this>;
+        stamp(dx?: number, dy?: number, x?: number, y?: number, sx?: number, sy?: number, par?: Readonly<rgl.rgl.RGL>, cx?: number, cy?: number): Promise<this>;
         [Symbol.iterator](): Generator<RGLMChunk, void, RGLMChunk>;
         get [Symbol.isConcatSpreadable](): boolean;
         get [Symbol.toStringTag](): string;
